@@ -165,13 +165,15 @@ async function setupTelegram(agent, sessions, sendToAgentStream, { stopCurrentRu
     const msgId = ctx.message.message_id;
     if (message.startsWith("/")) return;
 
-    // Dedup: skip if we've already processed this message
-    if (RECENT_MSG_IDS.has(msgId)) {
+    // Telegram message IDs are only unique within a chat, so include the
+    // chat ID to avoid dropping valid messages from different chats.
+    const dedupKey = `${chatId}:${msgId}`;
+    if (RECENT_MSG_IDS.has(dedupKey)) {
       console.log(`[telegram:${chatId}] Dedup skip msg_id=${msgId}`);
       return;
     }
-    RECENT_MSG_IDS.add(msgId);
-    recentOrder.push(msgId);
+    RECENT_MSG_IDS.add(dedupKey);
+    recentOrder.push(dedupKey);
     while (recentOrder.length > MAX_RECENT) {
       RECENT_MSG_IDS.delete(recentOrder.shift());
     }
@@ -486,7 +488,7 @@ class MessageSegments {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────��──────────
 // Handle incoming message
 // ─────────────────────────────────────────────────────────────
 
